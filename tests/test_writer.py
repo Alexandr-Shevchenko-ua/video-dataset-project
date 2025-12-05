@@ -29,6 +29,7 @@ def test_flush_metadata_creates_file(tmp_path):
         split="train",
         filters_passed=["blur"],
         filters_failed=[],
+        quality_scores={"blur": 100.0},
         augmentations=[],
         image_path="train/images/f1.jpg",
         resolution=(16, 16),

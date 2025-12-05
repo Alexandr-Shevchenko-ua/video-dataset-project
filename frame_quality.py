@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 import cv2
 import numpy as np
@@ -18,6 +18,7 @@ class FrameEvaluation:
 
     passes: bool
     scores: Dict[str, float]
+    failed_filters: List[str]
 
 
 def _variance_of_laplacian(gray: np.ndarray) -> float:
@@ -66,13 +67,19 @@ def evaluate_frame(
     )
     compression = _compression_blockiness(gray)
 
-    passes = (
-        blur >= config.blur_laplacian_thresh
-        and config.brightness_min <= brightness <= config.brightness_max
-        and exposure <= config.exposure_saturation_thresh
-        and motion <= config.motion_blur_thresh
-        and compression <= config.compression_block_thresh
-    )
+    failed: List[str] = []
+    if blur < config.blur_laplacian_thresh:
+        failed.append("blur")
+    if not (config.brightness_min <= brightness <= config.brightness_max):
+        failed.append("brightness")
+    if exposure > config.exposure_saturation_thresh:
+        failed.append("exposure")
+    if motion > config.motion_blur_thresh:
+        failed.append("motion_blur")
+    if compression > config.compression_block_thresh:
+        failed.append("compression")
+
+    passes = len(failed) == 0
     return FrameEvaluation(
         passes=passes,
         scores={
@@ -82,4 +89,5 @@ def evaluate_frame(
             "motion": motion,
             "compression": compression,
         },
+        failed_filters=failed,
     )

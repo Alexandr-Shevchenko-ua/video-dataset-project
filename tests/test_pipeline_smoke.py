@@ -13,9 +13,10 @@ def test_pipeline_config_initializes(tmp_path, monkeypatch):
     """Ensure pipeline can initialize with basic config."""
 
     cfg = PipelineConfig()
-    cfg.output.dataset_root = tmp_path
+    cfg.output.dataset_root = tmp_path / "out"
     cfg.temp_extract_dir = tmp_path / "tmp"
     cfg.raw_cache_dir = tmp_path / "cache"
+    cfg.metadata_path = cfg.output.dataset_root / "metadata.parquet"
     cfg.max_frames_total = 0
 
     # monkeypatch heavy dependencies to avoid real dataset downloads

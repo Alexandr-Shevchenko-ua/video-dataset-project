@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict, List, Literal, Optional, Tuple
+from typing import Any, Dict, List, Literal, Optional, Tuple
 
 from pydantic import BaseModel, Field, PositiveInt, validator
 
@@ -14,9 +14,7 @@ class EffectConfig(BaseModel):
 
     enabled: bool = True
     prob: float = Field(0.3, ge=0.0, le=1.0)
-    params: Dict[str, float | Tuple[float, float] | Tuple[int, int] | Tuple[int, float]] = Field(
-        default_factory=dict
-    )
+    params: Dict[str, Any] = Field(default_factory=dict)
 
 
 class SamplingConfig(BaseModel):
@@ -127,7 +125,10 @@ class OutputConfig(BaseModel):
 
     dataset_root: Path = Path("/data/uav_yolo_output")
     train_split: float = Field(0.8, gt=0.0, lt=1.0)
+    split_strategy: Literal["per_video", "per_frame"] = "per_video"
+    train_val_seed: int = 42
     metadata_format: Literal["parquet", "csv", "jsonl"] = "parquet"
+    metadata_batch_size: PositiveInt = 500
     compress_to_zip: bool = False
     overwrite_policy: Literal["fail", "ask", "force"] = "fail"
     cleanup_temp: bool = True

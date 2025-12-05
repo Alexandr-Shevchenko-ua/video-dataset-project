@@ -25,7 +25,7 @@ class ScanlinesTransform(A.ImageOnlyTransform):
     """Custom transform for scanline artifacts."""
 
     def __init__(self, config: EffectConfig, always_apply=False, p=0.5):
-        super().__init__(always_apply=always_apply, p=p if config.enabled else 0.0)
+        super().__init__(p=p if config.enabled else 0.0)
         self.cfg = config
 
     def apply(self, img: np.ndarray, **params):
@@ -49,7 +49,7 @@ class GhostingTransform(A.ImageOnlyTransform):
     """Ghosting effect."""
 
     def __init__(self, config: EffectConfig, always_apply=False, p=0.5):
-        super().__init__(always_apply=always_apply, p=p if config.enabled else 0.0)
+        super().__init__(p=p if config.enabled else 0.0)
         self.cfg = config
 
     def apply(self, img: np.ndarray, **params):
@@ -68,7 +68,7 @@ class DropoutPatchesTransform(A.ImageOnlyTransform):
     """Random rectangular dropouts."""
 
     def __init__(self, config: EffectConfig, always_apply=False, p=0.5):
-        super().__init__(always_apply=always_apply, p=p if config.enabled else 0.0)
+        super().__init__(p=p if config.enabled else 0.0)
         self.cfg = config
 
     def apply(self, img: np.ndarray, **params):
@@ -99,10 +99,12 @@ def build_augmenter(config: AugmentationConfig) -> Callable[[np.ndarray], Tuple[
     if not config.enabled:
         return lambda img: (img, [])
 
+    sigma_min = config.noise.gaussian.params.get("sigma_min", 2.0)
+    sigma_max = config.noise.gaussian.params.get("sigma_max", 8.0)
     transforms: List[A.BasicTransform] = [
         A.OneOf(
             [
-                A.GaussNoise(var_limit=config.noise.gaussian.params.get("sigma_max", 8.0), p=1.0),
+                A.GaussNoise(p=1.0),
                 A.ISONoise(intensity=(0.3, 0.5), color_shift=(0.01, 0.05), p=1.0),
             ],
             p=config.noise.gaussian.prob,
