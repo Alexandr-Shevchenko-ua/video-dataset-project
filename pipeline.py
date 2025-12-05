@@ -117,28 +117,27 @@ def run_pipeline(config: PipelineConfig, progress_cb: Optional[Callable[[Progres
                     total_frames += 1
                     if progress_cb:
                         progress_cb(ProgressUpdate("frame", zip_idx, video_idx, total_frames))
+                    if not config.dry_run:
+                        frame_id = generate_frame_id(video_path.stem, sampled.frame_index)
+                        rel_path = save_frame_image(augmented_bgr, frame_id, split, config.output)
+                        passed_filters = [name for name in evaluation.scores.keys() if name not in evaluation.failed_filters]
+                        record = FrameRecord(
+                            frame_id=frame_id,
+                            video_id=video_path.stem,
+                            frame_index=sampled.frame_index,
+                            timestamp_ms=sampled.timestamp_ms,
+                            split=split,
+                            filters_passed=passed_filters,
+                            filters_failed=evaluation.failed_filters,
+                            quality_scores=evaluation.scores,
+                            augmentations=[aug.__dict__ for aug in applied],
+                            image_path=str(rel_path),
+                            resolution=tuple(int(x) for x in augmented_bgr.shape[:2]),
+                            diff_score=sampled.diff_score,
+                        )
+                        _writer().add(record)
                     if config.max_frames_total and total_frames >= config.max_frames_total:
                         break
-                    if config.dry_run:
-                        continue
-                    frame_id = generate_frame_id(video_path.stem, sampled.frame_index)
-                    rel_path = save_frame_image(augmented_bgr, frame_id, split, config.output)
-                    passed_filters = [name for name in evaluation.scores.keys() if name not in evaluation.failed_filters]
-                    record = FrameRecord(
-                        frame_id=frame_id,
-                        video_id=video_path.stem,
-                        frame_index=sampled.frame_index,
-                        timestamp_ms=sampled.timestamp_ms,
-                        split=split,
-                        filters_passed=passed_filters,
-                        filters_failed=evaluation.failed_filters,
-                        quality_scores=evaluation.scores,
-                        augmentations=[aug.__dict__ for aug in applied],
-                        image_path=str(rel_path),
-                        resolution=tuple(int(x) for x in augmented_bgr.shape[:2]),
-                        diff_score=sampled.diff_score,
-                    )
-                    _writer().add(record)
                 if config.max_frames_total and total_frames >= config.max_frames_total:
                     break
             if not config.dry_run and metadata_writer is not None:
