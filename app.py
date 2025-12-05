@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import Any, Dict, List
 
 import gradio as gr
@@ -108,6 +109,42 @@ def _config_to_inputs(config: PipelineConfig) -> List[Any]:
         config.max_frames_total,
         config.allow_output_cleanup,
     ]
+
+
+_PATH_FIELDS: tuple[tuple[str, ...], ...] = (
+    ("output", "dataset_root"),
+    ("raw_cache_dir",),
+    ("temp_extract_dir",),
+    ("metadata_path",),
+)
+
+
+def _normalize_path_fields(payload: Dict[str, Any]) -> None:
+    """Ensure path-like values are strings before validation."""
+
+    for keys in _PATH_FIELDS:
+        parent: Dict[str, Any] | None = payload
+        for key in keys[:-1]:
+            if parent is None:
+                break
+            next_parent = parent.get(key)
+            if not isinstance(next_parent, dict):
+                parent = None
+                break
+            parent = next_parent
+        if parent is None:
+            continue
+        leaf = keys[-1]
+        if leaf not in parent or parent[leaf] is None:
+            continue
+        value = parent[leaf]
+        if isinstance(value, Path):
+            parent[leaf] = str(value)
+        elif isinstance(value, str):
+            continue
+        else:
+            dotted = ".".join(keys)
+            raise gr.Error(f"Field '{dotted}' must be a string path, got {type(value).__name__}")
 
 
 def run_pipeline_ui(inputs: Dict[str, Any], progress=gr.Progress(track_tqdm=False)) -> str:
@@ -257,6 +294,7 @@ def build_interface() -> gr.Blocks:
                 data = json.loads(text)
             except json.JSONDecodeError as err:  # pragma: no cover - UI only
                 raise gr.Error(f"Invalid JSON: {err}")
+            _normalize_path_fields(data)
             cfg = PipelineConfig(**data)
             return _config_to_inputs(cfg)
 

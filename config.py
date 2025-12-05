@@ -190,6 +190,24 @@ class PipelineConfig(_BaseModel):
             raise ValueError("temp_extract_dir must not be inside dataset_root")
         return temp_dir
 
+    def to_jsonable(self) -> Dict[str, Any]:
+        """Return a nested dict where Path/Model objects are serialized."""
+
+        def convert(value: Any) -> Any:
+            from pydantic import BaseModel as _Base
+
+            if isinstance(value, Path):
+                return str(value)
+            if isinstance(value, _Base):
+                return convert(value.dict())
+            if isinstance(value, dict):
+                return {k: convert(v) for k, v in value.items()}
+            if isinstance(value, (list, tuple)):
+                return [convert(v) for v in value]
+            return value
+
+        return convert(self.dict())
+
 
 def default_config() -> PipelineConfig:
     """Return a ready-to-use default configuration."""
@@ -197,16 +215,10 @@ def default_config() -> PipelineConfig:
     return PipelineConfig()
 
 
-def _json_safe_dict(config: PipelineConfig) -> Dict[str, Any]:
-    """Return dict that is guaranteed to be JSON/YAML serializable."""
-
-    return json.loads(config.json())
-
-
 def config_to_dict(config: PipelineConfig) -> Dict[str, Any]:
     """Public helper for UI/tests needing serializable configs."""
 
-    return _json_safe_dict(config)
+    return config.to_jsonable()
 
 
 def load_config(path: Path) -> PipelineConfig:
@@ -226,7 +238,7 @@ def load_config(path: Path) -> PipelineConfig:
 def save_config(config: PipelineConfig, path: Path) -> None:
     """Persist config to disk."""
 
-    data = _json_safe_dict(config)
+    data = config.to_jsonable()
     if path.suffix.lower() in {".yaml", ".yml"}:
         import yaml
 
